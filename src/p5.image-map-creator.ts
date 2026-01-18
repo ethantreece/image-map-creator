@@ -73,6 +73,10 @@ export class imageMapCreator {
 	protected fusion: boolean;
 	protected tolerance: number;
 	protected bgLayer: BgLayer;
+	protected shiftToggle: boolean;
+	protected ctrlToggle: boolean;
+	protected shiftIndicator: HTMLElement | null;
+	protected ctrlIndicator: HTMLElement | null;
 	public p5: P5;
 
 	/**
@@ -109,6 +113,10 @@ export class imageMapCreator {
 		this.magnetism = true;
 		this.fusion = false;
 		this.tolerance = 6;
+		this.shiftToggle = false;
+		this.ctrlToggle = false;
+		this.shiftIndicator = null;
+		this.ctrlIndicator = null;
 		this.bgLayer = new BgLayer(this);
 		// Must be the last instruction of the constructor.
 		// @ts-ignore p5 is supposed to be in the global scope
@@ -154,12 +162,141 @@ export class imageMapCreator {
 			.addButton("Generate Svg", () => { this.settings.setValue("Output", this.map.toSvg()) })
 			.addTextArea("Output")
 			.addButton("Save", this.save.bind(this));
+		
+		// Create toggle indicators
+		this.createToggleIndicators();
+		
 		//@ts-ignore Fix for oncontextmenu
 		this.p5.canvas.addEventListener("contextmenu", (e) => { e.preventDefault(); });
 		//@ts-ignore Fix for middle click mouse down triggers scroll on windows
 		this.p5.canvas.addEventListener("mousedown", (e) => { e.preventDefault(); });
 		//@ts-ignore Select all onclick on the Output field
 		document.getElementById("Output").setAttribute("onFocus", "this.select();");
+	}
+
+	private createToggleIndicators(): void {
+		// Get the parent container - find the QuickSettings panel that was created
+		let settingsPanel = document.querySelector(".qs_container");
+		if (!settingsPanel || !settingsPanel.parentElement) {
+			console.warn("Could not find settings panel to attach indicators");
+			return;
+		}
+		let settingsContainer = settingsPanel.parentElement;
+		
+		// Create a container for the indicators
+		let indicatorContainer = document.createElement("div");
+		indicatorContainer.style.position = "absolute";
+		indicatorContainer.style.top = "0";
+		indicatorContainer.style.left = (this.p5.width + 5) + "px";
+		indicatorContainer.style.display = "flex";
+		indicatorContainer.style.gap = "15px";
+		indicatorContainer.style.padding = "10px";
+		indicatorContainer.style.backgroundColor = "#f0f0f0";
+		indicatorContainer.style.borderRadius = "4px";
+		indicatorContainer.style.fontFamily = "Arial, sans-serif";
+		indicatorContainer.style.fontSize = "12px";
+		indicatorContainer.style.zIndex = "1000";
+		
+		// Create Shift indicator
+		let shiftContainer = document.createElement("div");
+		shiftContainer.style.display = "flex";
+		shiftContainer.style.alignItems = "center";
+		shiftContainer.style.gap = "5px";
+		
+		this.shiftIndicator = document.createElement("span");
+		this.shiftIndicator.style.display = "inline-block";
+		this.shiftIndicator.style.width = "14px";
+		this.shiftIndicator.style.height = "14px";
+		this.shiftIndicator.style.borderRadius = "2px";
+		this.shiftIndicator.style.backgroundColor = "#ccc";
+		this.shiftIndicator.style.border = "1px solid #999";
+		this.shiftIndicator.innerHTML = "";
+		
+		let shiftLabel = document.createElement("span");
+		shiftLabel.textContent = "Shift";
+		shiftLabel.style.fontWeight = "bold";
+		
+		let shiftHelp = document.createElement("span");
+		shiftHelp.innerHTML = "❓";
+		shiftHelp.style.cursor = "help";
+		shiftHelp.style.fontSize = "14px";
+		shiftHelp.title = "Snaps to straight directions (horizontal, vertical, or 45-degree diagonals).";
+		shiftHelp.style.opacity = "0.6";
+		shiftHelp.addEventListener("mouseenter", () => {
+			shiftHelp.style.opacity = "1";
+		});
+		shiftHelp.addEventListener("mouseleave", () => {
+			shiftHelp.style.opacity = "0.6";
+		});
+		
+		shiftContainer.appendChild(this.shiftIndicator);
+		shiftContainer.appendChild(shiftLabel);
+		shiftContainer.appendChild(shiftHelp);
+		
+		// Create Ctrl indicator
+		let ctrlContainer = document.createElement("div");
+		ctrlContainer.style.display = "flex";
+		ctrlContainer.style.alignItems = "center";
+		ctrlContainer.style.gap = "5px";
+		
+		this.ctrlIndicator = document.createElement("span");
+		this.ctrlIndicator.style.display = "inline-block";
+		this.ctrlIndicator.style.width = "14px";
+		this.ctrlIndicator.style.height = "14px";
+		this.ctrlIndicator.style.borderRadius = "2px";
+		this.ctrlIndicator.style.backgroundColor = "#ccc";
+		this.ctrlIndicator.style.border = "1px solid #999";
+		this.ctrlIndicator.innerHTML = "";
+		
+		let ctrlLabel = document.createElement("span");
+		ctrlLabel.textContent = "Ctrl";
+		ctrlLabel.style.fontWeight = "bold";
+		
+		let ctrlHelp = document.createElement("span");
+		ctrlHelp.innerHTML = "❓";
+		ctrlHelp.style.cursor = "help";
+		ctrlHelp.style.fontSize = "14px";
+		ctrlHelp.title = "Snaps to straight directions in relation to the first point of the polygon.";
+		ctrlHelp.style.opacity = "0.6";
+		ctrlHelp.addEventListener("mouseenter", () => {
+			ctrlHelp.style.opacity = "1";
+		});
+		ctrlHelp.addEventListener("mouseleave", () => {
+			ctrlHelp.style.opacity = "0.6";
+		});
+		
+		ctrlContainer.appendChild(this.ctrlIndicator);
+		ctrlContainer.appendChild(ctrlLabel);
+		ctrlContainer.appendChild(ctrlHelp);
+		
+		// Add both to the indicator container
+		indicatorContainer.appendChild(shiftContainer);
+		indicatorContainer.appendChild(ctrlContainer);
+		
+		// Add the indicator container to the page
+		settingsContainer.appendChild(indicatorContainer);
+	}
+
+	private updateToggleIndicators(): void {
+		if (this.shiftIndicator) {
+			if (this.shiftToggle) {
+				this.shiftIndicator.style.backgroundColor = "#4CAF50";
+				this.shiftIndicator.style.boxShadow = "0 0 5px rgba(76, 175, 80, 0.7)";
+			} else {
+				this.shiftIndicator.style.backgroundColor = "#ccc";
+				this.shiftIndicator.style.boxShadow = "none";
+			}
+		}
+		
+		if (this.ctrlIndicator) {
+			if (this.ctrlToggle) {
+				this.ctrlIndicator.style.backgroundColor = "#2196F3";
+				this.ctrlIndicator.style.boxShadow = "0 0 5px rgba(33, 150, 243, 0.7)";
+			} else {
+				this.ctrlIndicator.style.backgroundColor = "#ccc";
+				this.ctrlIndicator.style.boxShadow = "none";
+			}
+		}
 	}
 
 	private draw(): void {
@@ -169,6 +306,7 @@ export class imageMapCreator {
 		this.setOutput();
 		this.setBackground();
 		this.setTitle(this.hoveredArea);
+		this.updateToggleIndicators();
 		this.p5.translate(this.view.transX, this.view.transY);
 		this.p5.scale(this.view.scale);
 		this.drawImage();
@@ -264,6 +402,11 @@ export class imageMapCreator {
 	}
 
 	private keyPressed(e: KeyboardEvent): boolean {
+		if (e.shiftKey) {
+			this.shiftToggle = !this.shiftToggle;
+		} else if (e.ctrlKey) {
+			this.ctrlToggle = !this.ctrlToggle;
+		}
 		if (e.composed && e.ctrlKey) {
 			switch (e.key) {
 				case 's':
@@ -577,9 +720,59 @@ export class imageMapCreator {
 
 	updateTempArea(): void {
 		let coord = this.drawingCoord();
+		if (!this.tempArea.isEmpty() && this.tool === "polygon" && this.shiftToggle) {
+			// Snap to 8 directions when Shift is toggled
+			let coords = this.tempArea.getCoords();
+			if (coords.length > 0) {
+				let lastCoord = coords[coords.length - 2];
+				coord = this.snapCoordTo8Directions(lastCoord, coord);
+			}
+		}
+		if (!this.tempArea.isEmpty() && this.tool === "polygon" && this.ctrlToggle) {
+			// Snap to 8 directions when Ctrl is toggled
+			let coords = this.tempArea.getCoords();
+			if (coords.length > 0) {
+				let firstCoord = coords[0];
+				coord = this.snapCoordTo8Directions(firstCoord, coord);
+			}
+		}
 		if (!this.tempArea.isEmpty()) {
 			this.tempArea.updateLastCoord(coord);
 		}
+	}
+
+	/**
+	 * Snap a coordinate to one of 8 directions (horizontal, vertical, or 45-degree diagonals)
+	 * from the given origin point
+	 */
+	private snapCoordTo8Directions(from: Coord, to: Coord): Coord {
+		let dx = to.x - from.x;
+		let dy = to.y - from.y;
+		let distance = Math.sqrt(dx * dx + dy * dy);
+
+		// If distance is very small, return the from coordinate
+		if (distance < 1) {
+			return from;
+		}
+
+		// Calculate the angle in radians (-π to π)
+		let angle = Math.atan2(dy, dx);
+
+		// Convert to degrees for easier handling
+		let degrees = (angle * 180) / Math.PI;
+
+		// Snap to nearest 45-degree increment
+		// The 8 directions are at: 0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°
+		let snappedDegrees = Math.round(degrees / 45) * 45;
+
+		// Convert back to radians
+		let snappedAngle = (snappedDegrees * Math.PI) / 180;
+
+		// Calculate the new coordinates
+		let newX = from.x + distance * Math.cos(snappedAngle);
+		let newY = from.y + distance * Math.sin(snappedAngle);
+
+		return new Coord(newX, newY);
 	}
 
 	exportMap(): string {
